@@ -20,7 +20,7 @@ module: ec2_ami
 version_added: "1.3"
 short_description: create or destroy an image in ec2
 description:
-     - Creates or deletes ec2 images.
+     - Creates or deletes ec2 images. 
 options:
   instance_id:
     description:
