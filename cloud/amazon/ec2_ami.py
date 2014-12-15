@@ -20,7 +20,7 @@ module: ec2_ami
 version_added: "1.3"
 short_description: create or destroy an image in ec2
 description:
-     - Creates or deletes ec2 images. 
+     - Creates or deletes ec2 images.
 options:
   instance_id:
     description:
@@ -30,7 +30,7 @@ options:
     aliases: []
   name:
     description:
-      - The name of the new image to create
+      - The name of the image to be created or deregistered
     required: false
     default: null
     aliases: []
@@ -128,6 +128,16 @@ EXAMPLES = '''
     delete_snapshot: False
     state: absent
 
+# Deregister AMI with name
+- ec2_ami:
+    aws_access_key: xxxxxxxxxxxxxxxxxxxxxxx
+    aws_secret_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    region: xxxxxx
+    name: "{{ instance.name }}"
+    delete_snapshot: False
+    state: absent
+
+
 '''
 import sys
 import time
@@ -196,12 +206,17 @@ def deregister_image(module, ec2):
     Deregisters AMI
     """
 
-    image_id = module.params.get('image_id')
+    image_id = module.params.get('image_id', None)
+    name = module.params.get('name', None)
     delete_snapshot = module.params.get('delete_snapshot')
     wait = module.params.get('wait')
     wait_timeout = int(module.params.get('wait_timeout'))
 
-    img = ec2.get_image(image_id)
+    if image_id:
+        img = ec2.get_image(image_id)
+    elif name:
+        img = ec2.get_all_images(filters={'name':name})[0]
+
     if img == None:
         module.fail_json(msg = "Image %s does not exist" % image_id, changed=False)
 
@@ -245,8 +260,8 @@ def main():
     ec2 = ec2_connect(module)
 
     if module.params.get('state') == 'absent':
-        if not module.params.get('image_id'):
-            module.fail_json(msg='image_id needs to be an ami image to registered/delete')
+        if not (module.params.get('image_id') or module.params.get('name')):
+            module.fail_json(msg='image_id or name needs to be an ami image to be registered/deleted')
 
         deregister_image(module, ec2)
 
@@ -264,4 +279,3 @@ from ansible.module_utils.basic import *
 from ansible.module_utils.ec2 import *
 
 main()
-
